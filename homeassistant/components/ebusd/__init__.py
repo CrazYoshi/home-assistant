@@ -1,4 +1,10 @@
-"""Support for Ebusd daemon for communication with eBUS heating systems."""
+"""
+Support for Ebusd daemon for communication with eBUS heating systems.
+
+For more details about this component, please refer to the documentation at
+https://home-assistant.io/components/ebus/
+"""
+
 from datetime import timedelta
 import logging
 import socket
@@ -46,14 +52,14 @@ def setup(hass, config):
     server_address = (
         conf.get(CONF_HOST), conf.get(CONF_PORT))
 
+    import ebusdpy
     try:
-        _LOGGER.debug("Ebusd component setup started")
-        import ebusdpy
+        _LOGGER.debug("Ebusd component setup started.")
         ebusdpy.init(server_address)
         hass.data[DOMAIN] = EbusdData(server_address, circuit)
 
         sensor_config = {
-            CONF_MONITORED_CONDITIONS: monitored_conditions,
+            'monitored_conditions': monitored_conditions,
             'client_name': name,
             'sensor_types': SENSOR_TYPES[circuit]
         }
@@ -61,10 +67,8 @@ def setup(hass, config):
 
         hass.services.register(
             DOMAIN, SERVICE_EBUSD_WRITE, hass.data[DOMAIN].write)
-
-        _LOGGER.debug("Ebusd component setup completed")
         return True
-    except (socket.timeout, socket.error):
+    except (ebusdpy.EBusError):
         return False
 
 
@@ -91,9 +95,8 @@ class EbusdData:
                     _LOGGER.warning(command_result)
                 else:
                     self.value[name] = command_result
-        except RuntimeError as err:
+        except ebusdpy.EBusError as err:
             _LOGGER.error(err)
-            raise RuntimeError(err)
 
     def write(self, call):
         """Call write methon on ebusd."""
@@ -108,5 +111,5 @@ class EbusdData:
             if command_result is not None:
                 if 'done' not in command_result:
                     _LOGGER.warning('Write command failed: %s', name)
-        except RuntimeError as err:
+        except ebusdpy.EBusError as err:
             _LOGGER.error(err)
